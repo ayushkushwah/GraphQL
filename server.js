@@ -1,23 +1,78 @@
+var express = require('express');
+var graphqlHTTP = require('express-graphql');
 var {
-    graphql,
-    buildSchema
+  buildSchema
 } = require('graphql');
 
-// Construct a schema, using GraphQL schema language
+var credentials = {
+  userId: 10,
+  firstName: "Ayush",
+  lastName: "Kushwah",
+  username: "ayushkushwah",
+  password: "password",
+  phone: "8982288090"
+}
+
 var schema = buildSchema(`
-  type Query {
-    hello: String
-  }
+    type User {
+        userId: Int,
+        firstName: String,
+        lastName: String,
+        username: String,
+        phone: String
+    }
+    type Auth {
+        isLoggedIn: Boolean,
+        getFullName: String,
+        getUser: User
+    }
+    type Query {
+        userLogin(username: String, password: String): Auth
+    }
 `);
 
-// The root provides a resolver function for each API endpoint
-var root = {
-    hello: () => {
-        return 'Hello world!';
-    },
-};
+class User {
+  constructor() {
+    this.userId = credentials.userId;
+    this.firstName = credentials.firstName;
+    this.lastName = credentials.lastName;
+    this.username = credentials.username;
+    this.phone = credentials.phone;
+  }
+}
 
-// Run the GraphQL query '{ hello }' and print out the response
-graphql(schema, '{ hello }', root).then((response) => {
-    console.log(response);
-});
+class Auth {
+  constructor(isLoggedIn) {
+    this.isLoggedIn = isLoggedIn;
+  }
+  getFullName() {
+    return (this.isLoggedIn) ? credentials.firstName + " " + credentials.lastName : null;
+  }
+  getUser() {
+    return (this.isLoggedIn) ? new User() : null;
+  }
+}
+
+var root = {
+  userLogin: ({
+    username,
+    password
+  }) => {
+    var auth = new Auth();
+    if (username == credentials.username && password == credentials.password) {
+      auth.isLoggedIn = true;
+    } else {
+      auth.isLoggedIn = false;
+    }
+    return auth;
+  }
+}
+
+var app = express();
+app.use('/graphql', graphqlHTTP({
+  schema: schema,
+  rootValue: root,
+  graphiql: true,
+}));
+app.listen(4000);
+console.log('Running a GraphQL API server at localhost:4000/graphql');
